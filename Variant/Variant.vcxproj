@@ -119,8 +119,10 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="meta.h" />
+    <ClInclude Include="variant_meta.h" />
     <ClInclude Include="variant.h" />
+    <ClInclude Include="variant_struct.h" />
+    <ClInclude Include="variant_data.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

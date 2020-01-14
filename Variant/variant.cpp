@@ -1,12 +1,12 @@
+
 #include <sstream>
 #include <stack>
 #include <string>
 #include "variant.h"
-
+using namespace std;
 namespace croper {
-
+	const variant variant::None = variant();
 	using list = variant::list;
-
 	void ErrorMsg(string s)
 	{
 #ifdef _DEBUG
@@ -32,7 +32,7 @@ namespace croper {
 
 
 	//构造函数
-	variant::variant() {}
+	variant::variant() {};
 	variant::variant(const initializer_list<variant>& l)
 	{
 		set_type<list>();
@@ -191,14 +191,25 @@ namespace croper {
 
 	variant & variant::operator=(const char * sz)
 	{
-		_data = make_shared<Data<string>>(sz);
+		_data = CreateData<string>(sz);
 		return *this;
 	}
 
 	variant & variant::operator[](int i)
 	{
 		if (is_type<list>()) {
-			return dynamic_cast<Data<list>*>(&*_data)->data[i];
+			return _data->original_data<list>()[i];
+		}
+#ifdef VARIANT_REGISTER_TYPE
+		ErrorMsg("variant的内部类型不是list");
+#endif
+		return *this;
+	}
+
+	const variant & variant::operator[](int i) const
+	{
+		if (is_type<list>()) {
+			return _data->original_data<list>()[i];
 		}
 #ifdef VARIANT_REGISTER_TYPE
 		ErrorMsg("variant的内部类型不是list");
@@ -211,7 +222,7 @@ namespace croper {
 		return _data->mytype();
 	}
 
-	variant operator ""V(const char* p, size_t s) {
+	variant operator ""_V(const char* p, size_t s) {
 		return Variant_Read(p);
 	}
 }

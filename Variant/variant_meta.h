@@ -1,11 +1,9 @@
 #pragma once
 
-//检测两个类型是否能互相转化
-
+//检测两个类型是否相同
 template<typename T1, typename T2>
 class IsSame {
 private:
-
 	enum { result = 0};
 };
 
@@ -16,7 +14,7 @@ private:
 	enum { result = 1 };
 };
 
-
+//检测两个类型是否能互相转化
 template<typename Dest, typename Orig>
 class CanMatch{
 private:
