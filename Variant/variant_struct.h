@@ -11,6 +11,7 @@
 #include <initializer_list>
 #include <string>
 #include <vector>
+#include <assert.h>
 #include "variant_meta.h"
 
 namespace croper {
@@ -408,7 +409,7 @@ namespace croper {
 
 		template <typename retT, typename T, typename ...TArgs2>
 		static retT call(retT(*fp)(TArgs..., T&, TArgs2...), variant lst_v, int i, TArgs...args) {
-			return SendArgs<TArgs..., T>::call(fp, lst_v, i + 1, args..., lst_v[i].__My_base<T>());
+			return SendArgs<TArgs..., T&>::call(fp, lst_v, i + 1, args..., lst_v[i].__My_base<T>());
 		}
 
 		template <typename T>
@@ -428,7 +429,7 @@ namespace croper {
 
 		template < typename T, typename ...TArgs2>
 		static void call(void(*fp)(TArgs..., T&, TArgs2...), variant lst_v, int i, TArgs...args) {
-			SendArgs<TArgs..., T>::call(fp, lst_v, i + 1, args..., lst_v[i].__My_base<T>());
+			SendArgs<TArgs..., T&>::call(fp, lst_v, i + 1, args..., lst_v[i].__My_base<T>());
 		}
 
 	};
@@ -480,12 +481,14 @@ namespace croper {
 	template<typename T>
 	inline T & variant::__My_base()
 	{
+		assert(is_type<T>());
 		return _data->original_data<T>();
 	}
 
 	template<typename T>
 	inline const T & variant::__My_base() const
 	{
+		assert(is_type<T>());
 		return _data->original_data<T>();
 	}
 
@@ -500,7 +503,6 @@ namespace croper {
 		for (int i = 0; i < this->size(); ++i) {
 			ret.push_back(this->operator[](i));
 		}
-		//ret.assign(_data->original_data<list>().begin(), _data->original_data<list>().end());
 		return ret;
 	}
 };

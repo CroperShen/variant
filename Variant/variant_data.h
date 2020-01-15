@@ -27,7 +27,17 @@ namespace croper {
 
 	template<typename T>
 	inline std::string Data<T>::mytype() const {
-		return typeid(*this).name();
+		return typeid(data).name();
+	}
+
+	template<>
+	inline std::string Data<std::string>::mytype() const {
+		return "string";
+	}
+
+	template<>
+	inline std::string Data<variant::list>::mytype() const {
+		return "list";
 	}
 
 	template<typename T>

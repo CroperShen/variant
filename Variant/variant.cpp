@@ -78,9 +78,9 @@ namespace croper {
 		variant ret;
 		stack<variant*> stk;
 		stk.push(&ret);
-		bool Recording = false;   //是否正在记录
-		int digit_type = 0;       //0为整数，1为浮点数，2为字符串
-		bool transfered = false;  //转义标签，上一个字符串是否为转义符。
+		bool Recording = false;		//是否正在记录
+		int digit_type = 0;			//0为整数，1为浮点数，2为字符串
+		bool transfered = false;	//转义标签，上一个字符串是否为转义符。
 		string temp;
 
 		ret.set_type<list>();
@@ -218,8 +218,17 @@ namespace croper {
 		return *this;
 	}
 
+	bool variant::operator==(const variant & v2)
+	{
+		if (_data == v2._data) return true;
+		return false;
+	}
+
 	string variant::type() const
 	{
+		if (_data == nullptr) {
+			return "void";
+		}
 		return _data->mytype();
 	}
 
