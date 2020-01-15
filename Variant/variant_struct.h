@@ -1,27 +1,23 @@
 //=======================================================================================
 //--------------------------------------------------------------------------------------|
-//variant类																				|	
-//仿python变量的变体类。																|
-//主要分为两部分 Variant和Data															|
-//variant本身是一个智能指针的包装，作为表层数据，指向Data								|
-//Data是一个实际类型的包装，本身是模板，共同拥有一个接口IData							|
+//                          variant类的框架，不含Data部分								|	
 //--------------------------------------------------------------------------------------| 
-//========================================================================================
+//=======================================================================================
 #ifndef __VARIANT_STRUCT_H
 #define __VARIANT_STRUCT_H
 
-#include <string>
-#include <vector>
 #include <share.h>
 #include <iostream>
 #include <initializer_list>
+#include <string>
+#include <vector>
 #include "variant_meta.h"
 
 namespace croper {
 
-	//================================================================================
-	//类型定义开始
-	//===============================================================================
+//================================================================================
+//定义开始
+//===============================================================================
 	class variant {
 	private:
 		using string = std::string;
@@ -68,16 +64,17 @@ namespace croper {
 #undef VARIANT_REGISTER
 			//****************************************************************************
 		};
+		//声明为友元
 		friend struct IData;
-
 		//创建Data，解耦合用
 		template <typename T>
 		static std::shared_ptr<IData> CreateData();
 		template <typename T>
 		static std::shared_ptr<IData> CreateData(const T& t);
-		//========================================================================================
-		//Judge类，技术类，根据不同的模板参数给出不同的函数									
-		//========================================================================================
+
+//========================================================================================
+//Judge类，技术类，根据不同的模板参数给出不同的函数									
+//========================================================================================
 		template <int N, typename T, typename my_type, typename templ_arg>
 		struct Judge;
 		//Judge<0>
@@ -162,7 +159,8 @@ namespace croper {
 		//variant类自身的函数
 		//=====================================================================
 	private:
-
+		//使用智能指针指向_data,这样不再需要对_data进行内存管理，且能进行浅拷贝。
+		//python变量也是相似的机制
 		std::shared_ptr<IData> _data;
 		//====================================================================
 
@@ -215,6 +213,10 @@ namespace croper {
 		template <typename T> operator T() const;
 		//转化为特定类型，std::vector重载版本
 		template <typename T> operator std::vector<T>() const;
+		//获取原始数据，慎用
+		template <typename T> T& __My_base();
+		template <typename T> const T& __My_base() const;
+
 		//================================以下是各种运算符的重载==============================
 
 		//已完成部分
@@ -230,11 +232,11 @@ namespace croper {
 		//工作量有点大，有时间慢慢写
 		bool operator==(const variant&);
 		template <typename T> bool operator==(const T&);
-		template <typename T> bool friend operator== (const T&, const variant&);
+		//template <typename T> bool friend operator== (const T&, const variant&);
 
 		bool operator!=(const variant&);
 		template <typename T> bool operator!=(const T&);
-		template <typename T> bool friend operator!=(const T&, const variant&);
+		//template <typename T> bool friend operator!=(const T&, const variant&);
 
 		variant& operator++();
 		variant& operator--();
@@ -282,15 +284,86 @@ namespace croper {
 	variant Variant_Read(const std::string&);
 	//可以在字符串后加_V以简化实现上述功能
 	variant operator ""_V(const char* p, size_t s);
+
+
 	//=============================================================================
 	//声明结束，以下是模板函数的实现代码
 	//=============================================================================
 
+	//------------------------------------------------------------------------
+	//IData类的函数
+	//-------------------------------------------------------------------------
+	//原始数据：类型指定错误会错误
+	template<typename T>
+	inline T & variant::IData::original_data()
+	{
+		return dynamic_cast<_IData_templ<T>*>(this)->get_data();
+	}
+	
+
+	//----------------------------------------------------------------------------
+	//Judge类的函数
+	//----------------------------------------------------------------------------
+
+	//当原类型与目标类型相同时
+	template<typename T, typename my_type, typename templ_arg>
+	inline void variant::Judge<0, T, my_type, templ_arg>::transtype(my_type * self, variant * base)
+	{
+		//什么也不做
+	}
+
+	//当目标类型为list但源类型不为list时，转化为长度为1的list，第一个元素即为自身
+	template<typename T, typename my_type, typename templ_arg>
+	inline void variant::Judge<1, T, my_type, templ_arg>::transtype(my_type * self, variant * base)
+	{
+		base->_data = CreateData<list>(list({ *base }));
+	}
+
+	//当目标类型不为list但源类型为list时，将第一个元素转化为目标元素
+	template<typename T, typename my_type, typename templ_arg>
+	inline void variant::Judge<2, T, my_type, templ_arg>::transtype(my_type * self, variant * base)
+	{
+		*base = base[0];
+		base->set_type<T>();
+	}
+
+	//当源类型能转化为目标类型时，进行默认转化
+	template<typename T, typename my_type, typename templ_arg>
+	inline void variant::Judge<3, T, my_type, templ_arg>::transtype(my_type * self, variant * base)
+	{
+		base->_data = CreateData<T>(self->get_data());
+	}
+
+	//当源类型不能转化为目标类型时，设为默认值
+	template<typename T, typename my_type, typename templ_arg>
+	inline void variant::Judge<4, T, my_type, templ_arg>::transtype(my_type * self, variant * base)
+	{
+		base->_data = CreateData<T>(T());
+	}
+
+	template<typename T, typename my_type, typename templ_arg>
+	inline T variant::Judge<1, T, my_type, templ_arg>::get_data(my_type * self) {
+		return static_cast<T>(self->get_data());
+	}
+
+	template<typename T, typename my_type, typename templ_arg>
+	inline T variant::Judge<0, T, my_type, templ_arg>::get_data(my_type * self) {
+#ifdef VARIANT_STRICT_TYPE_CHECK
+		std::string s = std::string(typeid(T).name()) + "与" + typeid(templ_arg).name() + "的类型无法匹配";
+		ErrorMsg(s);
+#endif
+		return T();
+	}
+
+	//------------------------------------------------------------------------------------
+	//variant自身的函数
+	//----------------------------------------------------------------------------------------
 
 	template<typename T>
 	inline variant::variant(const T & t) {
 		operator=(t);
 	}
+
 
 	template<typename T>
 	inline bool variant::is_type() const
@@ -298,6 +371,7 @@ namespace croper {
 		IData *p = &*_data;
 		return dynamic_cast<_IData_templ <T>*>(p) != nullptr;
 	}
+	
 	template<>
 	inline bool variant::is_type<void>() const {
 		return !_data;
@@ -315,9 +389,6 @@ namespace croper {
 	}
 
 
-
-
-
 	template<typename ...TArgs>
 	struct SendArgs {
 		template <typename retT, typename T>
@@ -325,20 +396,39 @@ namespace croper {
 			return fp(args..., lst_v[i]);
 		}
 
+		template <typename retT, typename T>
+		static retT call(retT(*fp)(TArgs..., T&), variant lst_v, int i, TArgs...args) {
+			return fp(args..., lst_v[i].__My_base<T>());
+		}
+
 		template <typename retT, typename T, typename ...TArgs2>
 		static retT call(retT(*fp)(TArgs..., T, TArgs2...), variant lst_v, int i, TArgs...args) {
-#pragma message("编译1中")
 			return SendArgs<TArgs..., T>::call(fp, lst_v, i + 1, args..., lst_v[i]);
-#pragma message("编译1结束")
+		}
+
+		template <typename retT, typename T, typename ...TArgs2>
+		static retT call(retT(*fp)(TArgs..., T&, TArgs2...), variant lst_v, int i, TArgs...args) {
+			return SendArgs<TArgs..., T>::call(fp, lst_v, i + 1, args..., lst_v[i].__My_base<T>());
 		}
 
 		template <typename T>
 		static void call(void(*fp)(TArgs..., T), variant lst_v, int i, TArgs...args) {
 			fp(args..., lst_v[i]);
 		}
+
+		template <typename T>
+		static void call(void(*fp)(TArgs..., T&), variant lst_v, int i, TArgs...args) {
+			fp(args..., lst_v[i].__My_base<T>());
+		}
+
 		template < typename T, typename ...TArgs2>
 		static void call(void(*fp)(TArgs..., T, TArgs2...), variant lst_v, int i, TArgs...args) {
 			SendArgs<TArgs..., T>::call(fp, lst_v, i + 1, args..., lst_v[i]);
+		}
+
+		template < typename T, typename ...TArgs2>
+		static void call(void(*fp)(TArgs..., T&, TArgs2...), variant lst_v, int i, TArgs...args) {
+			SendArgs<TArgs..., T>::call(fp, lst_v, i + 1, args..., lst_v[i].__My_base<T>());
 		}
 
 	};
@@ -375,6 +465,7 @@ namespace croper {
 	inline variant & variant::operator=(const std::vector<T>& v)
 	{
 		_data = CreateData<list>(v);
+		return *this;
 	}
 
 	template<typename T>
@@ -384,6 +475,18 @@ namespace croper {
 			return T();
 		}
 		return _data->get_data<T>();
+	}
+
+	template<typename T>
+	inline T & variant::__My_base()
+	{
+		return _data->original_data<T>();
+	}
+
+	template<typename T>
+	inline const T & variant::__My_base() const
+	{
+		return _data->original_data<T>();
 	}
 
 	template<typename T>
@@ -399,59 +502,6 @@ namespace croper {
 		}
 		//ret.assign(_data->original_data<list>().begin(), _data->original_data<list>().end());
 		return ret;
-	}
-
-
-
-	template<typename T, typename my_type, typename templ_arg>
-	inline void variant::Judge<0, T, my_type, templ_arg>::transtype(my_type * self, variant * base)
-	{
-		//什么也不做
-	}
-
-	template<typename T, typename my_type, typename templ_arg>
-	inline void variant::Judge<1, T, my_type, templ_arg>::transtype(my_type * self, variant * base)
-	{
-		base->_data = CreateData<list>(list({ *base }));
-	}
-
-	template<typename T, typename my_type, typename templ_arg>
-	inline void variant::Judge<2, T, my_type, templ_arg>::transtype(my_type * self, variant * base)
-	{
-		*base = base[0];
-		base->set_type<T>();
-	}
-
-	template<typename T, typename my_type, typename templ_arg>
-	inline void variant::Judge<3, T, my_type, templ_arg>::transtype(my_type * self, variant * base)
-	{
-		base->_data = CreateData<T>(self->get_data());
-	}
-
-	template<typename T, typename my_type, typename templ_arg>
-	inline void variant::Judge<4, T, my_type, templ_arg>::transtype(my_type * self, variant * base)
-	{
-		base->_data = CreateData<T>(T());
-	}
-
-	template<typename T, typename my_type, typename templ_arg>
-	inline T variant::Judge<1, T, my_type, templ_arg>::get_data(my_type * self) {
-		return static_cast<T>(self->get_data());
-	}
-
-	template<typename T, typename my_type, typename templ_arg>
-	inline T variant::Judge<0, T, my_type, templ_arg>::get_data(my_type * self) {
-#ifdef VARIANT_STRICT_TYPE_CHECK
-		std::string s = std::string(typeid(T).name()) + "与" + typeid(templ_arg).name() + "的类型无法匹配";
-		ErrorMsg(s);
-#endif
-		return T();
-	}
-
-	template<typename T>
-	inline T & variant::IData::original_data()
-	{
-		return dynamic_cast<_IData_templ<T>*>(this)->get_data();
 	}
 };
 

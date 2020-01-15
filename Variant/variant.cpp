@@ -195,6 +195,7 @@ namespace croper {
 		return *this;
 	}
 
+
 	variant & variant::operator[](int i)
 	{
 		if (is_type<list>()) {

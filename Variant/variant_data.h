@@ -1,7 +1,11 @@
 #ifndef __VARIANT_DATA_H
 #define __VARIANT_DATA_H
-
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <stack>
 #include "variant.h"
+
 namespace croper {
 	template <typename T>
 	class Data :public variant::_IData_templ<T> {
@@ -14,6 +18,7 @@ namespace croper {
 		Data* copy() const override;
 		std::string to_string() const override;
 	};
+
 
 	template<typename T>
 	inline T& Data<T>::get_data() {
@@ -45,16 +50,76 @@ namespace croper {
 		return data ? "(true)" : "(false)";
 	}
 
+
+	//使用图的dps算法来构造当data的type为list时的字符串算法
+	//不能使用树的dps算法，可能会有环路。
 	template <>
-	inline std::string Data<std::vector<variant>>::to_string() const {
-		if (data.empty()) return "[]";
-		std::string ret = "[";
-		for (auto &v : data) {
-			ret += v.to_string();
-			ret.push_back(',');
+	inline std::string Data<std::vector<variant>>::to_string() const {	
+		using list = variant::list;
+		struct ele {
+			const list* p;
+			int index;
+		};
+		struct map_ele {
+			int state;
+			std::string sz;
+			map_ele() :state(0), sz("") {};
+		};
+		std::unordered_map<const list*,map_ele> checked;
+		std::stack<ele> stk;
+		const list* p = &data;
+		stk.push({ p,0 });
+		checked[p].sz = "[";
+		while (!stk.empty()) {
+			checked[p].state = 1;
+			int &i = stk.top().index;
+			do {
+				std::string& sz = checked[p].sz;
+				const variant& v = (*p)[i];
+				if (!v.is_type<list>()) {
+					sz += v.to_string();
+					sz += ",";
+				}
+				else {
+					map_ele& e = checked[&v.__My_base<list>()];
+					if (e.state == 2) {
+						sz += e.sz;
+						sz += ',';
+					}
+					else if (e.state == 1) {
+						sz += "[...]";
+						sz += ',';
+					}
+					else
+					{
+						p = &v.__My_base<list>();
+						stk.push({ p,0 });
+						checked[p].sz = "[";
+						break;
+					}
+				}
+			} while (++i < p->size());
+	
+
+			while (stk.top().index == p->size()) {
+				if (p->empty()) {
+					checked[p].sz.push_back(']');
+				}
+				else {
+					checked[p].sz.back() = ']';
+				}
+				checked[p].state = 2;
+				std::string& sz = checked[p].sz;
+				stk.pop();
+				if (stk.empty()) break;
+				p = stk.top().p;
+				checked[p].sz += sz;
+				checked[p].sz +=',';
+				stk.top().index++;
+			}
 		}
-		ret.back() = ']';
-		return ret;
+	
+		return checked[&data].sz;
 	}
 
 	template <typename T>
