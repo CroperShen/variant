@@ -24,14 +24,6 @@ namespace croper {
 		os << t._data->to_string();
 		return os;
 	}
-
-	bool operator==(const variant & v1, const variant &v2)
-	{
-		if (v1._data == v2._data) return true;
-		if (v1._data == nullptr || v2._data == nullptr) return false;
-		return v1._data->operator==(*v2._data);
-	}
-
 	//========================================================================================
 	//以下是variant的函数
 
@@ -265,6 +257,17 @@ namespace croper {
 		ErrorMsg("variant的内部类型不是list");
 #endif
 		return *this;
+	}
+
+	bool variant::operator==(const variant & v1) const
+	{
+		if (v1._data == this->_data) {
+			return true;
+		}
+		if (v1._data == nullptr || this->_data == nullptr) {
+			return false;
+		}
+		return *this->_data==*v1._data;
 	}
 
 

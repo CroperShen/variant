@@ -233,12 +233,10 @@ namespace croper {
 		//const版本
 		const variant& operator[](int i) const;
 
-
+		bool operator==(const variant&) const;
 		//未完成部分
 		//工作量有点大，有时间慢慢写
-		//template <typename T> bool operator==(const T&);
-		//template <typename T> bool operator==(const std::vector<T>&);
-		friend bool operator== (const variant&, const variant&);
+
 
 		bool operator!=(const variant&);
 		template <typename T> bool operator!=(const T&);
@@ -295,7 +293,6 @@ namespace croper {
 	bool __data_equal(const variant::_IData_templ<T1>&, const variant::_IData_templ<T2>&);
 	constexpr bool __data_equal(...);
 
-	bool operator== (const variant&, const variant&);
 	//=============================================================================
 	//声明结束，以下是模板函数的实现代码
 	//=============================================================================
@@ -392,6 +389,7 @@ namespace croper {
 	//variant自身的函数
 	//----------------------------------------------------------------------------------------
 
+	//重载equal_to
 
 
 	template <typename T1,typename T2,typename>
@@ -541,6 +539,7 @@ namespace croper {
 		}
 		return _data->original_data<T>();
 	}
+
 
 	template<typename T>
 	inline variant::operator std::vector<T>() const

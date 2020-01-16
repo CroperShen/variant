@@ -82,8 +82,9 @@ void Swap(int& a, int& b) {
 }
 
 int main() {
-	if (string("hello") == 5.0) {
-
-	}
+	variant v1 = "hello world";
+	variant v2 = 5;
+	variant v3 = v1 == v2;
+	cout << v3 << endl;
 	system("pause");
 }
