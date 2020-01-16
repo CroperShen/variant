@@ -6,7 +6,6 @@
 using namespace std;
 namespace croper {
 	const variant variant::None = variant();
-	using list = variant::list;
 	void ErrorMsg(string s)
 	{
 #ifdef _DEBUG
@@ -26,8 +25,16 @@ namespace croper {
 		return os;
 	}
 
+	bool operator==(const variant & v1, const variant &v2)
+	{
+		if (v1._data == v2._data) return true;
+		if (v1._data == nullptr || v2._data == nullptr) return false;
+		return v1._data->operator==(*v2._data);
+	}
+
 	//========================================================================================
 	//以下是variant的函数
+
 
 
 
@@ -81,67 +88,108 @@ namespace croper {
 		bool Recording = false;		//是否正在记录
 		int digit_type = 0;			//0为整数，1为浮点数，2为字符串
 		bool transfered = false;	//转义标签，上一个字符串是否为转义符。
+		bool quotes_start = false;  //是否以引号开始，以引号开始也应该以引号结束；
+		char prev_end = 0;          //上一个引发结束段落的符号
 		string temp;
 
 		ret.set_type<list>();
 		for (const char* p = sz.c_str();; p++) {
 			const char& c = *p;
 			variant& v = *stk.top();
-			if (Recording && c == '\0' || !transfered && c == ',' || Recording && !transfered && (c == '[' || c == ']')) {  //结算当前字符串
+
+			bool paragraph_end_flag = false;            //是否应该结束并记录当前字符串
+			do {
+				if (Recording && c == '\0') {
+					paragraph_end_flag = true;
+				}
+				if (c == '\0') break;
+				if (transfered) break;
+
+				if (!Recording && prev_end==',' && c == ',') {
+					paragraph_end_flag = true;
+				}
+				if (!Recording) break;
+
+				if (quotes_start && (c == '\"' || c == '\0')) {
+					paragraph_end_flag = true;
+				}
+				if (quotes_start) break;
+
+				if (c == '\0' || c==','||c == '\"' || c == '[' || c == ']' || c == '\n' || c == '\t' || c == ' ') {
+					paragraph_end_flag = true;
+				}
+			} while (false);
+	
+			
+
+			if (paragraph_end_flag) {  //结算当前字符串
 				variant v0= Variant_Read_Simple(temp,digit_type);
 				v.append(v0);
+				prev_end = c;
 				Recording = false;
-				if (*p == ',') {
+				quotes_start = false;
+				if (prev_end == '\"') {
 					continue;
 				}
 			}
-			if (!transfered && *p == '[') {
+			if (c == '\0') {
+				break;
+			}
+
+			if (!transfered && c== '[') {
 				v.append(variant());
 				v.back().set_type<list>();
 				stk.push(&v.back());
 				continue;
 			}
-			else if (!transfered && *p == ']') {
+			if (!transfered && c == ']') {
 				stk.pop();
 				if (stk.empty()) {
 					break;
 				}
 				continue;
 			}
-			else if (!transfered && !Recording && (*p == ' ' || *p == '\n' || *p == '\t')) {
+			if (!transfered && !Recording && (c == ' ' || c == '\n' || c == '\t' || c == ',')) {
 				continue;
 			}
-			else if (*p == '\0') {
-				break;
+			if (!transfered && c == '\\') {
+				transfered = true;
+				continue;
+			}
+
+			transfered = false;
+			if (!Recording) {
+				Recording = true;
+				digit_type = 0;
+				temp.clear();
+				if (c == '\"') {
+					quotes_start = true;
+					digit_type = 2;
+				}
+				else {
+					temp.push_back(c);
+				}
 			}
 			else {
-				if (!transfered && *p == '//') {
-					transfered = true;
-					continue;
-				}
-				if (!Recording) {
-					Recording = true;
-					digit_type = 0;
-					temp.clear();
-				}
-				while (digit_type < 2) {
-					if (!isdigit(*p) && *p != '-' && *p != '.') {
-						digit_type = 2;
-						break;
-					}
-					if (*p == '-' && !temp.empty()) {
-						digit_type = 2;
-						break;
-					}
-					if (*p == '.') {
-						digit_type += 1;
-						break;
-					}
+				temp.push_back(c);
+			}
+			while (digit_type < 2) {
+				if (!isdigit(*p) && *p != '-' && *p != '.') {
+					digit_type = 2;
 					break;
 				}
-				temp.push_back(*p);
+				if (*p == '-' && !temp.empty()) {
+					digit_type = 2;
+					break;
+				}
+				if (*p == '.') {
+					digit_type += 1;
+					break;
+				}
+				break;
 			}
 		}
+
 		if (ret.size() == 0) {
 			return variant();
 		}
@@ -150,6 +198,7 @@ namespace croper {
 		}
 		return ret;
 	}
+
 
 	void variant::clear()
 	{
@@ -218,11 +267,6 @@ namespace croper {
 		return *this;
 	}
 
-	bool variant::operator==(const variant & v2)
-	{
-		if (_data == v2._data) return true;
-		return false;
-	}
 
 	string variant::type() const
 	{

@@ -115,8 +115,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="variant.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="variant.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="variant_meta.h" />
@@ -126,6 +126,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
+    <None Include="cpp.hint" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

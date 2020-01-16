@@ -46,6 +46,19 @@ struct isReference<T&&> {
 	enum { result = 1 };
 };
 
+//检测两个类型是否能进行"=="运算。
+template <typename T1, typename T2>
+struct CanEqual {
+private:
+	template <typename = decltype(declval<T1>() == declval<T2>())>
+	constexpr static auto answer(int) { return true; };
+	constexpr static auto answer(...) { return false; };
+public:
+	constexpr operator bool() {
+		return answer(0);
+	}
+};
+
 #define IF_0(Code)
 #define IF_1(Code) Code
 #define IF(Bool,Code) IF_##Bool##(Code)

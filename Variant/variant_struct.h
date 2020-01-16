@@ -15,15 +15,14 @@
 #include "variant_meta.h"
 
 namespace croper {
-
+	class variant;
+	using list = std::vector<variant>;
+	using string = std::string;
 //================================================================================
 //定义开始
 //===============================================================================
 	class variant {
-	private:
-		using string = std::string;
 	public:
-		using list = std::vector<variant>;
 		static const variant None;
 #ifndef VARIANT_REGISTER_TYPE
 #define VARIANT_REGISTER_TYPE
@@ -31,6 +30,9 @@ namespace croper {
 //****************************************************************************
 
 
+		struct IData;
+		template <int,typename, typename, typename> struct Judge;
+		template <typename> struct _IData_templ;
 //==================================================================================
 //IData类，定义Data的接口
 //==================================================================================
@@ -48,19 +50,24 @@ namespace croper {
 			template <typename T> void trans_type(variant*);
 			//原始数据：类型指定错误会错误
 			template <typename T> T& original_data();
-
+			virtual bool operator==(const IData&) = 0;
+			template <typename T> bool equal_to_type(const _IData_templ<T>&) const;
 
 			//*******************************宏代码块***************************************
 					//get_data与astype是模板，本身无法继承，这里让get_data调用_get_data_int,_get_data_float等以实现继承
 #define VARIANT_REGISTER(T) \
 			virtual T _get_data_##T##() = 0;\
 			virtual void _trans_type_##T##(variant*) = 0;\
+			virtual bool _equal_to_##T##(const _IData_templ<T>&) const= 0;\
 			template<> T get_data<T>(){\
 				return _get_data_##T##();\
 			}\
 			template<> void trans_type<T>(variant* base) {\
 				_trans_type_##T##(base);\
-			}
+			}\
+			template <> bool equal_to_type<T>(const _IData_templ<T>& t) const{\
+				return _equal_to_##T##(t);\
+			}		
 			VARIANT_REGISTER_TYPE;
 #undef VARIANT_REGISTER
 			//****************************************************************************
@@ -143,15 +150,13 @@ namespace croper {
 		template <typename templ_arg>
 		struct _IData_templ :public IData {
 			virtual templ_arg& get_data() = 0;
+			virtual const templ_arg& get_data() const= 0;
+			virtual bool operator==(const IData&) override;
 			//*******************************宏代码块***************************************
 #define VARIANT_REGISTER(T) \
-			virtual T _get_data_##T##() override{\
-				return Judge<CanMatch<T,templ_arg>::result,T,_IData_templ,templ_arg>::get_data(this);\
-			}\
-			virtual void _trans_type_##T##(variant* base) override{\
-				constexpr int d=DistinguishType<T,templ_arg>::result;\
-				Judge<d, T, _IData_templ, templ_arg>::transtype(this,base);\
-			}
+			virtual T _get_data_##T##() override;\
+			virtual void _trans_type_##T##(variant* base) override;\
+			virtual bool _equal_to_##T##(const _IData_templ<T>& d2) const override;
 			VARIANT_REGISTER_TYPE;
 #undef VARIANT_REGISTER
 			//****************************************************************************
@@ -231,9 +236,9 @@ namespace croper {
 
 		//未完成部分
 		//工作量有点大，有时间慢慢写
-		bool operator==(const variant&);
-		template <typename T> bool operator==(const T&);
-		//template <typename T> bool friend operator== (const T&, const variant&);
+		//template <typename T> bool operator==(const T&);
+		//template <typename T> bool operator==(const std::vector<T>&);
+		friend bool operator== (const variant&, const variant&);
 
 		bool operator!=(const variant&);
 		template <typename T> bool operator!=(const T&);
@@ -286,10 +291,37 @@ namespace croper {
 	//可以在字符串后加_V以简化实现上述功能
 	variant operator ""_V(const char* p, size_t s);
 
+	template <typename T1,typename T2, typename = decltype(std::declval<T1>() == std::declval<T2>())>
+	bool __data_equal(const variant::_IData_templ<T1>&, const variant::_IData_templ<T2>&);
+	constexpr bool __data_equal(...);
 
+	bool operator== (const variant&, const variant&);
 	//=============================================================================
 	//声明结束，以下是模板函数的实现代码
 	//=============================================================================
+
+		
+	//*******************************宏代码块************************************************************
+	
+#define VARIANT_REGISTER(T)																				\
+			template <typename T2>																		\
+			T variant::_IData_templ<T2>::_get_data_##T##(){												\
+				return Judge<CanMatch<T,T2>::result,T,_IData_templ,T2>::get_data(this);					\
+			}																							\
+			template <typename T2>																		\
+			void variant::_IData_templ<T2>::_trans_type_##T##(variant* base){							\
+				constexpr int d=DistinguishType<T,T2>::result;											\
+				Judge<d, T, _IData_templ,T2>::transtype(this,base);										\
+			}																							\
+			template <typename T2>																		\
+			bool variant::_IData_templ<T2>::_equal_to_##T##(const _IData_templ<T>& d2) const {					\
+				return __data_equal(*this,d2);															\
+			}																							\
+
+	   VARIANT_REGISTER_TYPE
+
+	//***************************************************************************************************
+
 
 	//------------------------------------------------------------------------
 	//IData类的函数
@@ -359,6 +391,18 @@ namespace croper {
 	//------------------------------------------------------------------------------------
 	//variant自身的函数
 	//----------------------------------------------------------------------------------------
+
+
+
+	template <typename T1,typename T2,typename>
+	bool __data_equal(const variant::_IData_templ<T1>& d1, const variant::_IData_templ<T2>& d2) {
+		return d1.get_data() == d2.get_data();
+	}
+
+	constexpr bool __data_equal(...) {
+		return false;
+	}
+
 
 	template<typename T>
 	inline variant::variant(const T & t) {
@@ -481,14 +525,20 @@ namespace croper {
 	template<typename T>
 	inline T & variant::__My_base()
 	{
-		assert(is_type<T>());
+		if (is_type<T>() == false) {
+			std::cerr << "待转换的参数类型不匹配,目标是" << typeid(T).name() << ",但源参数类型是" << type() << std::endl;
+			assert(0);
+		}
 		return _data->original_data<T>();
 	}
 
 	template<typename T>
 	inline const T & variant::__My_base() const
 	{
-		assert(is_type<T>());
+		if (is_type<T>() == false) {
+			std::cerr << "待转换的参数类型不匹配,目标是" << typeid(T).name() << ",但源参数类型是" << type() << std::endl;
+			assert(0);
+		}
 		return _data->original_data<T>();
 	}
 
@@ -504,6 +554,11 @@ namespace croper {
 			ret.push_back(this->operator[](i));
 		}
 		return ret;
+	}
+	template<typename templ_arg>
+	inline bool variant::_IData_templ<templ_arg>::operator==(const IData & d)
+	{
+		return d.equal_to_type(*this);
 	}
 };
 

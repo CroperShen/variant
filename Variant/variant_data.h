@@ -14,6 +14,7 @@ namespace croper {
 		Data() {};
 		Data(const T& t) :data(t) {};
 		T& get_data() override;
+		const T& get_data() const override;
 		std::string mytype() const override;
 		Data* copy() const override;
 		std::string to_string() const override;
@@ -22,6 +23,11 @@ namespace croper {
 
 	template<typename T>
 	inline T& Data<T>::get_data() {
+		return data;
+	}
+
+	template<typename T>
+	inline const T& Data<T>::get_data() const{
 		return data;
 	}
 
@@ -36,7 +42,7 @@ namespace croper {
 	}
 
 	template<>
-	inline std::string Data<variant::list>::mytype() const {
+	inline std::string Data<list>::mytype() const {
 		return "list";
 	}
 
@@ -52,7 +58,7 @@ namespace croper {
 
 	template <>
 	inline std::string Data<std::string>::to_string() const {
-		return data;
+		return "\""+data+"\"";
 	}
 
 	template <>
@@ -65,7 +71,6 @@ namespace croper {
 	//不能使用树的dps算法，可能会有环路。
 	template <>
 	inline std::string Data<std::vector<variant>>::to_string() const {	
-		using list = variant::list;
 		struct ele {
 			const list* p;
 			int index;

@@ -1,0 +1,6 @@
+// 提示文件帮助 Visual Studio IDE 解释 Visual C++ 标识符,
+// 如函数和宏的名称。
+// 有关详细信息，请参见 https://go.microsoft.com/fwlink/?linkid=865984
+#define VARIANT_REGISTER(T) virtual T _get_data_##T##() = 0; virtual void _trans_type_##T##(variant*) = 0; virtual bool _equal_to_##T##(const _IData_templ<T>&) = 0; template<> T get_data<T>(){ return _get_data_##T##(); } template<> void trans_type<T>(variant* base) { _trans_type_##T##(base); } template <> bool operator==(const _IData_templ<T>& t){ return _equal_to_##T##(t); }
+#define VARIANT_REGISTER(T) virtual T _get_data_##T##() override; virtual void _trans_type_##T##(variant* base) override; virtual bool _equal_to_##T##(const _IData_templ<T>& d2) override;
+#define VARIANT_REGISTER(T) template <typename T2> inline T variant::_IData_templ<T2>::_get_data_##T##(){ return Judge<CanMatch<T,T2>::result,T,_IData_templ,T2>::get_data(this); } template <typename T2> inline void variant::_IData_templ<T2>::_trans_type_##T##(variant* base){ constexpr int d=DistinguishType<T,T2>::result; Judge<d, T, _IData_templ,T2>::transtype(this,base); } template <typename T2> bool variant::_IData_templ<T2>::_equal_to_##T##(const const _IData_templ<T>& d2){ return __data_equal<T2,T>(*this,d2); }
