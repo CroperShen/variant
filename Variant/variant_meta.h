@@ -59,8 +59,34 @@ public:
 	}
 };
 
+
+template <typename T1, typename T2, typename T3, typename T4>
+struct disable_if {
+	typedef T2 t;
+};
+
+template <typename T, typename T3, typename T4>
+struct disable_if<T, T,T3,T4> {
+};
+
+template <typename T1, typename T2, typename T3, typename T4>
+struct disable_if<T1&,T2,T3, T4> {
+	typedef typename disable_if<T1,T2,T3,T4>::t t;
+};
+
+template <typename T1, typename T2, typename T3,typename T4>
+struct disable_if<T1, T2&, T3, T4> {
+	typedef typename disable_if<T1, T2,T3,T4>::t t;
+};
+
+template <typename T1, typename T2, typename T3, typename T4>
+struct disable_if<T1&, T2&, T3, T4> {
+	typedef typename disable_if<T1, T2,T3,T4>::t t;
+};
+
 #define IF_0(Code)
 #define IF_1(Code) Code
 #define IF(Bool,Code) IF_##Bool##(Code)
+
 
 #endif

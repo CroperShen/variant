@@ -32,4 +32,10 @@ struct std::equal_to<croper::variant> {
 		return v1 == v2;
 	}
 };
+template <>
+struct std::less<croper::variant> {
+	bool operator()(const croper::variant& v1, const croper::variant& v2) const {
+		return v1 < v2;
+	}
+};
 #endif

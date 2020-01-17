@@ -16,7 +16,9 @@ namespace croper {
 		T& get_data() override;
 		const T& get_data() const override;
 		std::string mytype() const override;
-		Data* copy() const override;
+		virtual std::shared_ptr<variant::IData> prev() const override;
+		virtual std::shared_ptr<variant::IData> next() const override;
+		std::shared_ptr<variant::IData> copy() const override;
 		std::string to_string() const override;
 	};
 
@@ -36,6 +38,41 @@ namespace croper {
 		return typeid(data).name();
 	}
 
+	template <typename T,typename T2=decltype(++std::declval<T&>())>
+	std::shared_ptr<variant::IData> __Data_next(const Data<T>& d) {
+		T another = d.data;
+		return std::make_shared<Data<T>>(++another);
+	}
+	
+	template <typename>
+	std::shared_ptr<variant::IData> __Data_next(...) {
+		return nullptr;
+	}
+
+	template<typename T>
+	inline std::shared_ptr<variant::IData> Data<T>::next() const
+	{
+		return __Data_next<T>(*this);
+	}
+
+	template <typename T, typename T2 = decltype(--std::declval<T&>())>
+	std::shared_ptr<variant::IData> __Data_prev(const Data<T>& d) {
+		T another = d.data;
+		return std::make_shared<Data<T>>(--another);
+	}
+
+	template <typename>
+	std::shared_ptr<variant::IData> __Data_prev(...) {
+		return nullptr;
+	}
+
+	template<typename T>
+	inline std::shared_ptr<variant::IData> Data<T>::prev() const
+	{
+		return __Data_prev<T>(*this);
+	}
+
+
 	template<>
 	inline std::string Data<std::string>::mytype() const {
 		return "string";
@@ -47,12 +84,13 @@ namespace croper {
 	}
 
 	template<typename T>
-	inline Data<T> * Data<T>::copy() const {
-		return new Data(*this);
+	inline std::shared_ptr<variant::IData> Data<T>::copy() const {
+		return std::make_shared<Data<T>>(*this);
 	}
 
 	template<typename T>
-	inline std::string Data<T>::to_string() const {
+	std::string Data<T>::to_string() const {
+#pragma message(TO_STRING(T))
 		return std::to_string(data);
 	}
 

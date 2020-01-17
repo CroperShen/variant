@@ -2,6 +2,8 @@
 #include <sstream>
 #include <stack>
 #include <string>
+#include <cstring>
+#include <iomanip>
 #include "variant.h"
 using namespace std;
 namespace croper {
@@ -267,9 +269,232 @@ namespace croper {
 		if (v1._data == nullptr || this->_data == nullptr) {
 			return false;
 		}
-		return *this->_data==*v1._data;
+		return this->_data->equal(*v1._data);
 	}
 
+	bool variant::operator!=(const variant &v1) const
+	{
+		return !operator==(v1);
+	}
+
+	bool variant::operator>(const variant & v1) const
+	{
+		if (v1._data == this->_data) {
+			return true;
+		}
+		if (v1._data == nullptr || this->_data == nullptr) {
+			return false;
+		}
+		return this->_data->greater(*v1._data);
+	}
+
+	bool variant::operator<(const variant & v1) const
+	{
+		if (v1._data == this->_data) {
+			return true;
+		}
+		if (v1._data == nullptr || this->_data == nullptr) {
+			return false;
+		}
+		return this->_data->less(*v1._data);
+	}
+	bool variant::operator>=(const variant & v1) const
+	{
+		if (v1._data == this->_data) {
+			return true;
+		}
+		if (v1._data == nullptr || this->_data == nullptr) {
+			return false;
+		}
+		return this->_data->less(*v1._data);
+	}
+	bool variant::operator<=(const variant & v1) const
+	{
+		if (v1._data == this->_data) {
+			return true;
+		}
+		if (v1._data == nullptr || this->_data == nullptr) {
+			return false;
+		}
+		return this->_data->less(*v1._data);
+	}
+	variant & variant::operator++()
+	{
+		std::shared_ptr<IData> next = nullptr;
+		if (_data != nullptr) {
+			next = _data->next();
+		};
+		if (next == nullptr) {
+			ErrorMsg(__My_Address() + "的类型为:" + type() + ",不能进行++运算。");
+		}
+		else {
+			this->_data = next;
+		}
+		return *this;
+	}
+
+	variant variant::operator++(int)
+	{
+		std::shared_ptr<IData> next = nullptr;
+		if (_data != nullptr) {
+			next = _data->next();
+		};
+		if (next == nullptr) {
+			ErrorMsg(__My_Address() + "的类型为:" + type() + ",不能进行++运算。");
+			return *this;
+		}
+		variant ret = *this;
+		this->_data = next;
+		return ret;	
+	}
+
+	variant & variant::operator--()
+	{
+		std::shared_ptr<IData> prev = nullptr;
+		if (_data != nullptr) {
+			prev = _data->prev();
+		};
+		if (prev == nullptr) {
+			ErrorMsg(__My_Address() + "的类型为:" + type() + ",不能进行--运算。");
+		}
+		else {
+			this->_data = prev;
+		}
+		return *this;
+	}
+
+	variant variant::operator--(int)
+	{
+		std::shared_ptr<IData> prev = nullptr;
+		if (_data != nullptr) {
+			prev = _data->prev();
+		};
+		if (prev == nullptr) {
+			ErrorMsg(__My_Address() + "的类型为:" + type() + ",不能进行--运算。");
+			return *this;
+		}
+		variant ret = *this;
+		this->_data = prev;
+		return ret;
+	}
+
+	variant variant::operator+(const variant & v2) const
+	{
+		const variant& v1 = *this;
+		if (v1._data == nullptr) {
+			return v2;
+		}
+		if (v2._data == nullptr) {
+			return v1;
+		}
+		variant ret;
+		ret._data=v1._data->add(*v2._data);
+		if (ret._data == nullptr) {
+			ErrorMsg(v1.__My_Address() + "的类型是" + v1.type() + ",而" + v2.__My_Address() + "的类型是" + v2.type()+ "它们之间无法进行+运算。");
+		}
+		return ret;
+	}
+
+	variant& variant::operator+=(const variant & v2)
+	{
+		return *this = operator+(v2);
+	}
+
+	variant variant::operator-(const variant & v2) const
+	{
+		const variant& v1 = *this;
+		if (v1._data == nullptr) {
+			if (v2._data != nullptr) {
+				ErrorMsg(v1.__My_Address() + "的类型是" + v1.type() + ",而" + v2.__My_Address() + "的类型是" + v2.type() + "它们之间无法进行-运算。");
+			}
+			return v1;
+		}
+		if (v2._data == nullptr) {
+			return v1;
+		}
+		variant ret;
+		ret._data = v1._data->sub(*v2._data);
+		if (ret._data == nullptr) {
+			ErrorMsg(v1.__My_Address() + "的类型是" + v1.type() + ",而" + v2.__My_Address() + "的类型是" + v2.type() + "它们之间无法进行-运算。");
+			return v1;
+		}
+		return ret;
+	}
+
+	variant& variant::operator-=(const variant & v2)
+	{
+		return *this = operator-(v2);
+	}
+
+	variant variant::operator*(const variant & v2) const
+	{
+		const variant& v1 = *this;
+		if (v1._data == nullptr || v2._data==nullptr) {
+			return variant::None;
+		}
+		variant ret;
+		ret._data = v1._data->mul(*v2._data);
+		if (ret._data == nullptr) {
+			ErrorMsg(v1.__My_Address() + "的类型是" + v1.type() + ",而" + v2.__My_Address() + "的类型是" + v2.type() + "它们之间无法进行*运算。");
+		}
+		return ret;
+	}
+
+	variant& variant::operator*=(const variant & v2)
+	{
+		return *this = operator*(v2);
+	}
+
+	variant variant::operator/(const variant & v2) const
+	{
+		const variant& v1 = *this;
+		if (v1._data == nullptr || v2._data == nullptr) {
+			ErrorMsg(v1.__My_Address() + "的类型是" + v1.type() + ",而" + v2.__My_Address() + "的类型是" + v2.type() + "它们之间无法进行/运算。");
+			return variant::None;
+		}
+
+		variant ret;
+		ret._data = v1._data->div(*v2._data);
+		if (ret._data == nullptr) {
+			ErrorMsg(v1.__My_Address() + "的类型是" + v1.type() + ",而" + v2.__My_Address() + "的类型是" + v2.type() + "它们之间无法进行/运算。");
+		}
+		return ret;
+	}
+
+	variant& variant::operator/=(const variant & v2)
+	{
+		return *this = operator/(v2);
+	}
+
+	variant variant::operator%(const variant & v2) const
+	{
+		const variant& v1 = *this;
+		if (v1._data == nullptr || v2._data == nullptr) {
+			ErrorMsg(v1.__My_Address() + "的类型是" + v1.type() + ",而" + v2.__My_Address() + "的类型是" + v2.type() + "它们之间无法进行%运算。");
+			return variant::None;
+		}
+
+		variant ret;
+		ret._data = v1._data->rem(*v2._data);
+		if (ret._data == nullptr) {
+			ErrorMsg(v1.__My_Address() + "的类型是" + v1.type() + ",而" + v2.__My_Address() + "的类型是" + v2.type() + "它们之间无法进行%运算。");
+		}
+		return ret;
+	}
+
+	variant& variant::operator%=(const variant & v2)
+	{
+		return *this = operator%(v2);
+	}
+
+	string variant::__My_Address() const
+	{
+		constexpr char sz2[] = ",data address:";
+		constexpr char sz3[] = ">>";
+		ostringstream ss;
+		ss << hex << "<variant:<address:" << (const void*)this << ",data address:" << (const void*)&*_data << ">>";
+		return ss.str();
+	}
 
 	string variant::type() const
 	{
@@ -282,4 +507,5 @@ namespace croper {
 	variant operator ""_V(const char* p, size_t s) {
 		return Variant_Read(p);
 	}
+
 }
