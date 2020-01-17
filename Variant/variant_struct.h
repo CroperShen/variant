@@ -328,8 +328,8 @@ namespace croper {
 		//重载<<实现输出
 		friend std::ostream& operator<<(std::ostream& os, const variant&);
 		//重载[]
+
 		variant& operator[](int i);
-		//const版本
 		const variant& operator[](int i) const;
 
 
@@ -663,6 +663,8 @@ namespace croper {
 		return _data->get_data<T>();
 	}
 
+
+
 	template<typename T>
 	inline T & variant::__My_base()
 	{
@@ -684,7 +686,7 @@ namespace croper {
 	}
 
 
-	template<typename T>
+	template <typename T>
 	inline variant::operator std::vector<T>() const
 	{
 		if (!is_type<list>()) {

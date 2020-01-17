@@ -89,13 +89,11 @@ void Swap(int& a, int& b) {
 #define TO_STRING(T) #T
 
 int main() {
-	variant v1 = 5;
-	variant v2 = 3.0;
-	variant v3 = v1 == v2;
-	variant v4 = v1 / v2;
-	cout << v1 << endl;
+	variant v = 1;
+	variant v2 = v < 10;
 	cout << v2 << endl;
-	cout << v3 << endl;
-	cout << v4 << endl;
+	for (variant i = 0; i < 10; ++i) {
+		cout << i << endl;
+	}
 	system("pause");
 }
