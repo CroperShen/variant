@@ -23,6 +23,9 @@
     <ClInclude Include="variant_struct.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="variant_marco.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="variant.cpp">

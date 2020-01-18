@@ -12,7 +12,8 @@
 #include <string>
 #include <vector>
 #include <assert.h>
-
+#include <unordered_map>
+#include "variant_marco.h"
 #include "variant_meta.h"
 //=========================================================================
 
@@ -21,6 +22,7 @@
 namespace croper {
 	class variant;
 	using list = std::vector<variant>;
+	using dict = std::unordered_map<variant, variant>;
 	using string = std::string;
 //================================================================================
 //定义开始
@@ -28,11 +30,7 @@ namespace croper {
 	class variant {
 	public:
 		static const variant None;
-#ifndef VARIANT_REGISTER_TYPE
-#define VARIANT_REGISTER_TYPE
-#endif
 //****************************************************************************
-
 
 		struct IData;
 		template <int,typename, typename, typename> struct Judge;
@@ -50,101 +48,47 @@ namespace croper {
 			virtual std::shared_ptr<IData> copy() const = 0;
 			//以类型T获取数据，会发生类型的默认转化，当类型不匹配时会给出默认值,如果定义了宏VARIANT_STRICT_TYPE_CHECK的话会报错
 			template <typename T> T get_data();
-
-
-			
-			virtual std::shared_ptr<IData> next() const = 0;
-			virtual std::shared_ptr<IData> prev() const = 0;
-
-			virtual std::shared_ptr<IData> add(const IData&) const = 0;
-			virtual std::shared_ptr<IData> sub(const IData&) const = 0;
-			virtual std::shared_ptr<IData> mul(const IData&) const = 0;
-			virtual std::shared_ptr<IData> div(const IData&) const = 0;
-			virtual std::shared_ptr<IData> rem(const IData&) const = 0;
-
-			virtual bool equal(const IData&) const = 0;
-			virtual bool greater(const IData&) const = 0;
-			virtual bool less(const IData&)const = 0;
-			virtual bool ge(const IData&) const = 0;
-			virtual bool le(const IData&) const = 0;
-
-			template <typename T>  std::shared_ptr<IData> add2(const _IData_templ<T>&) const;
-			template <typename T>  std::shared_ptr<IData> sub2(const _IData_templ<T>&) const;
-			template <typename T>  std::shared_ptr<IData> mul2(const _IData_templ<T>&) const;
-			template <typename T>  std::shared_ptr<IData> div2(const _IData_templ<T>&) const;
-			template <typename T>  std::shared_ptr<IData> rem2(const _IData_templ<T>&) const;
-
-			template <typename T>  bool equal2(const _IData_templ<T>&) const;
-			template <typename T>  bool greater2(const _IData_templ<T>&) const;
-			template <typename T>  bool less2(const _IData_templ<T>&)const;
-			template <typename T>  bool ge2(const _IData_templ<T>&) const;
-			template <typename T>  bool le2(const _IData_templ<T>&) const;
-
 			//以类型T获取数据，会发生类型的默认转化
 			template <typename T> void trans_type(variant*);
 			//原始数据：类型指定错误会错误
 			template <typename T> T& original_data();
-		
+
+
+			//各种运算符的重载，不使用operator以避免混淆
+			virtual std::shared_ptr<IData> next() const = 0;
+			virtual std::shared_ptr<IData> prev() const = 0;
+
 
 			//*******************************宏代码块***************************************
-					//get_data与astype是模板，本身无法继承，这里让get_data调用_get_data_int,_get_data_float等以实现继承
+#define OPERATOR_TEMPLATE(OP_NAME,OP_SYMBOL,RET_TYPE,...)											\
+			virtual RET_TYPE OP_NAME##(const IData&) const=0;										\
+			template <typename T> RET_TYPE OP_NAME##2(const _IData_templ<T>&) const;				
+
+		OPERATOR_TEMPLATE_ALL()
+#undef OPERATOR_TEMPLATE
+
+
+#define OPERATOR_TEMPLATE(OP_NAME,OP_SYMBOL,RET_TYPE,T,...)											\
+			virtual RET_TYPE OP_NAME##_##T##(const _IData_templ<T>&) const = 0;						\
+			template <>  RET_TYPE OP_NAME##2(const _IData_templ<T>& t) const {						\
+				return OP_NAME##_##T##(t);															\
+			}
+
 #define VARIANT_REGISTER(T)																			\
 			virtual T _get_data_##T##() = 0;														\
 			virtual void _trans_type_##T##(variant*) = 0;											\
-			virtual std::shared_ptr<IData> add_##T##(const _IData_templ<T>&) const = 0;				\
-			virtual std::shared_ptr<IData> sub_##T##(const _IData_templ<T>&) const = 0;				\
-			virtual std::shared_ptr<IData> mul_##T##(const _IData_templ<T>&) const = 0;				\
-			virtual std::shared_ptr<IData> div_##T##(const _IData_templ<T>&) const = 0;				\
-			virtual std::shared_ptr<IData> rem_##T##(const _IData_templ<T>&) const = 0;				\
-																									\
-			virtual bool equal_##T##(const _IData_templ<T>&) const = 0;								\
-			virtual bool greater_##T##(const _IData_templ<T>&) const = 0;							\
-			virtual bool less_##T##(const _IData_templ<T>&)const = 0;								\
-			virtual bool ge_##T##(const _IData_templ<T>&) const = 0;								\
-			virtual bool le_##T##(const _IData_templ<T>&) const = 0;								\
-																									\
-			template <>  std::shared_ptr<IData> add2(const _IData_templ<T>& t) const {				\
-				return add_##T##(t);																\
-			}																						\
-			template <>  std::shared_ptr<IData> sub2(const _IData_templ<T>& t) const {				\
-				return sub_##T##(t);																\
-			}																						\
-			template <>  std::shared_ptr<IData> mul2(const _IData_templ<T>& t) const {				\
-				return mul_##T##(t);																\
-			}																						\
-			template <>  std::shared_ptr<IData> div2(const _IData_templ<T>& t) const {				\
-				return div_##T##(t);																\
-			}																						\
-			template <>  std::shared_ptr<IData> rem2(const _IData_templ<T>& t) const {				\
-				return rem_##T##(t);																\
-			}																						\
-																									\
-			template <>  bool equal2(const _IData_templ<T>& t) const {								\
-				return equal_##T##(t);																\
-			}																						\
-			template <>  bool greater2(const _IData_templ<T>& t) const {							\
-				return greater_##T##(t);															\
-			}																						\
-			template <>  bool less2(const _IData_templ<T>& t)const {								\
-				return less_##T##(t);																\
-			}																						\
-			template <>  bool ge2(const _IData_templ<T>& t) const {									\
-				return ge_##T##(t);																	\
-			}																						\
-			template <>  bool le2(const _IData_templ<T>& t) const {									\
-				return le_##T##(t);																	\
-			}																						\
-																									\
 			template<> T get_data<T>(){																\
 				return _get_data_##T##();															\
 			}																						\
 			template<> void trans_type<T>(variant* base) {											\
 				_trans_type_##T##(base);															\
 			}																						\
+			OPERATOR_TEMPLATE_ALL(T)
 
 			
 			VARIANT_REGISTER_TYPE;
 #undef VARIANT_REGISTER
+#undef OPERATOR_TEMPLATE
 			//****************************************************************************
 		};
 		//声明为友元
@@ -226,36 +170,24 @@ namespace croper {
 		struct _IData_templ :public IData {
 			virtual templ_arg& get_data() = 0;
 			virtual const templ_arg& get_data() const = 0;
-			virtual std::shared_ptr<IData> add(const IData&) const override;
-			virtual std::shared_ptr<IData> sub(const IData&) const override;
-			virtual std::shared_ptr<IData> mul(const IData&) const override;
-			virtual std::shared_ptr<IData> div(const IData&) const override;
-			virtual std::shared_ptr<IData> rem(const IData&) const override;
 
-			virtual bool equal(const IData&) const override;
-			virtual bool greater(const IData&) const override;
-			virtual bool less(const IData&)const override;
-			virtual bool ge(const IData&) const override;
-			virtual bool le(const IData&) const override;
 			//*******************************宏代码块***************************************
+#define OPERATOR_TEMPLATE(OP_NAME, OP_SYMBOL, RET_TYPE,...)	\
+			virtual RET_TYPE OP_NAME(const IData&) const override;		
+		OPERATOR_TEMPLATE_ALL()
+#undef	OPERATOR_TEMPLATE
+
+#define OPERATOR_TEMPLATE(OP_NAME, OP_SYMBOL, RET_TYPE,T)	\
+			virtual  RET_TYPE OP_NAME##_##T##(const _IData_templ<T>&) const override;				
+
 #define VARIANT_REGISTER(T) \
 			virtual T _get_data_##T##() override;													\
 			virtual void _trans_type_##T##(variant* base) override;									\
-																									\
-			virtual std::shared_ptr<IData> add_##T##(const _IData_templ<T>&) const override;		\
-			virtual std::shared_ptr<IData> sub_##T##(const _IData_templ<T>&) const override;		\
-			virtual std::shared_ptr<IData> mul_##T##(const _IData_templ<T>&) const override;		\
-			virtual std::shared_ptr<IData> div_##T##(const _IData_templ<T>&) const override;		\
-			virtual std::shared_ptr<IData> rem_##T##(const _IData_templ<T>&) const override;		\
-																									\
-			virtual bool equal_##T##(const _IData_templ<T>&) const override;						\
-			virtual bool greater_##T##(const _IData_templ<T>&) const override;						\
-			virtual bool less_##T##(const _IData_templ<T>&)const override;							\
-			virtual bool ge_##T##(const _IData_templ<T>&) const override;							\
-			virtual bool le_##T##(const _IData_templ<T>&) const override;							\
+			OPERATOR_TEMPLATE_ALL(T)
 
 			VARIANT_REGISTER_TYPE;
 #undef VARIANT_REGISTER
+#undef	OPERATOR_TEMPLATE
 			//****************************************************************************
 		};
 		//=====================================================================
@@ -360,7 +292,6 @@ namespace croper {
 		variant operator% (const variant&) const;
 		variant& operator%=(const variant&);
 
-
 	};
 	//=============================================================================
 	//以下是周边函数的声明
@@ -380,40 +311,44 @@ namespace croper {
 
 		
 	//*******************************宏代码块************************************************************
-#define OPERATOR_TEMPLATE(OP_NAME,FLAG)																	\
-	template <typename T1,typename T2, typename = decltype(std::declval<T1>() FLAG std::declval<T2>())>				\
-	bool __data_##OP_NAME##(const variant::_IData_templ<T1>& t1, const variant::_IData_templ<T2>& t2){		\
-		return t1.get_data() FLAG t2.get_data();																		\
-	}																												\
-	constexpr bool __data_##OP_NAME##(...) {																	\
-		return false;																								\
-	}																												\
+	//运算符重载-最终运算部分-解析 == , > , < , >= , <= 
+#pragma warning(push)
+#pragma warning(disable:4804)    //暂时忽视类型不匹配的警告
+#pragma warning(disable:4805)   
+#define OPERATOR_TEMPLATE(OP_NAME, OP_SYMBOL, RET_TYPE,...) 															\
+	template <typename T1,typename T2, typename = decltype(std::declval<T2>() OP_SYMBOL std::declval<T1>() )>			\
+	RET_TYPE __data_##OP_NAME##(const variant::_IData_templ<T1>& t1, const variant::_IData_templ<T2>& t2){				\
+		return t2.get_data() OP_SYMBOL t1.get_data();																	\
+	}																													\
+	constexpr RET_TYPE __data_##OP_NAME##(...) {																		\
+		return false;																									\
+	}																													\
 
-	OPERATOR_TEMPLATE(equal  ,  == );
-	OPERATOR_TEMPLATE(greater, >  );
-	OPERATOR_TEMPLATE(less   ,<  );
-	OPERATOR_TEMPLATE(ge     , >= );
-	OPERATOR_TEMPLATE(le     , <= );
+	OPERATOR_TEMPLATE_PART_A()
 #undef OPERATOR_TEMPLATE
+	//解析 + , - , * , / , % 
+#define OPERATOR_TEMPLATE(OP_NAME, OP_SYMBOL, RET_TYPE,...)																				\
+	template <typename T1,typename T2, typename retT= decltype(std::declval<T2>() OP_SYMBOL std::declval<T1>())>						\
+	RET_TYPE __data_##OP_NAME##(const variant::_IData_templ<T1>& t1, const variant::_IData_templ<T2>& t2){								\
+		return variant::CreateData<retT>(t2.get_data() OP_SYMBOL t1.get_data());														\
+	}																																	\
+	inline RET_TYPE __data_##OP_NAME##(...) {																							\
+		return nullptr;																													\
+	}																																	\
 
-#define OPERATOR_TEMPLATE(OP_NAME,FLAG)																				\
-	template <typename T1,typename T2, typename retT= decltype(std::declval<T1>() FLAG std::declval<T2>())>				\
-	std::shared_ptr<variant::IData> __data_##OP_NAME##(const variant::_IData_templ<T1>& t1, const variant::_IData_templ<T2>& t2){		\
-		typename disable_if<retT,variant,T1,T2>::t v=variant::None;													\
-		return variant::CreateData<retT>(t1.get_data() FLAG t2.get_data());																		\
-	}																												\
-	inline std::shared_ptr<variant::IData> __data_##OP_NAME##(...) {																	\
-		return nullptr;																								\
-	}																												\
-
-
-	OPERATOR_TEMPLATE(add,+);
-	OPERATOR_TEMPLATE(sub,-);
-	OPERATOR_TEMPLATE(mul,*);
-	OPERATOR_TEMPLATE(div,/);
-	OPERATOR_TEMPLATE(rem,%);
+	OPERATOR_TEMPLATE_PART_B()
 #undef OPERATOR_TEMPLATE
-	
+#pragma warning(pop)
+
+	//_IData_templ的类型特化函数的实现
+
+#define OPERATOR_TEMPLATE(OP_NAME, OP_SYMBOL, RET_TYPE,T)		                                                        \
+			template <typename T2>																						\
+			RET_TYPE variant::_IData_templ<T2>::##OP_NAME##_##T##(const variant::_IData_templ<T>& d2) const {			\
+				return __data_##OP_NAME##(*this,d2);																	\
+			}																												
+
+
 #define VARIANT_REGISTER(T)																								\
 			template <typename T2>																						\
 			T variant::_IData_templ<T2>::_get_data_##T##(){																\
@@ -424,51 +359,13 @@ namespace croper {
 				constexpr int d=DistinguishType<T,T2>::result;															\
 				Judge<d, T, _IData_templ,T2>::transtype(this,base);														\
 			}																											\
-			template <typename T2>																						\
-			bool variant::_IData_templ<T2>::equal_##T##(const variant::_IData_templ<T>& d2) const {						\
-				return __data_equal(*this,d2);																			\
-			}																											\
-			template <typename T2>																						\
-			bool variant::_IData_templ<T2>::greater_##T##(const variant::_IData_templ<T>& d2) const {					\
-				return __data_greater(*this,d2);																		\
-			}																											\
-			template <typename T2>																						\
-			bool variant::_IData_templ<T2>::less_##T##(const variant::_IData_templ<T>& d2) const {						\
-				return __data_less(*this,d2);																			\
-			}																											\
-			template <typename T2>																						\
-			bool variant::_IData_templ<T2>::ge_##T##(const variant::_IData_templ<T>& d2) const {						\
-				return __data_ge(*this,d2);																				\
-			}																											\
-			template <typename T2>																						\
-			bool variant::_IData_templ<T2>::le_##T##(const variant::_IData_templ<T>& d2) const {						\
-				return __data_le(*this,d2);																							\
-			}																														\
-			template <typename T2>																									\
-			std::shared_ptr<variant::IData> variant::_IData_templ<T2>::add_##T##(const variant::_IData_templ<T>& d2) const {		\
-				return __data_add(*this,d2);																						\
-			}																														\
-			template <typename T2>																									\
-			std::shared_ptr<variant::IData> variant::_IData_templ<T2>::sub_##T##(const variant::_IData_templ<T>& d2) const {		\
-				return __data_sub(*this,d2);																						\
-			}																														\
-			template <typename T2>																									\
-			std::shared_ptr<variant::IData> variant::_IData_templ<T2>::mul_##T##(const variant::_IData_templ<T>& d2) const {		\
-				return __data_mul(*this,d2);																						\
-			}																														\
-			template <typename T2>																									\
-			std::shared_ptr<variant::IData> variant::_IData_templ<T2>::div_##T##(const variant::_IData_templ<T>& d2) const {		\
-				return __data_div(*this,d2);																						\
-			}																														\
-			template <typename T2>																									\
-			std::shared_ptr<variant::IData> variant::_IData_templ<T2>::rem_##T##(const variant::_IData_templ<T>& d2) const {		\
-				return __data_rem(*this,d2);																						\
-			}																														\
-
+			OPERATOR_TEMPLATE_ALL(T)
 
 	   VARIANT_REGISTER_TYPE
+#undef OPERATOR_TEMPLATE
+#undef VARIANT_REGISTER
 
-	//***************************************************************************************************
+	//***************************************************************************************************************************************
 
 
 	//------------------------------------------------------------------------
@@ -512,7 +409,7 @@ namespace croper {
 	template<typename T, typename my_type, typename templ_arg>
 	inline void variant::Judge<3, T, my_type, templ_arg>::transtype(my_type * self, variant * base)
 	{
-		base->_data = CreateData<T>(self->get_data());
+		base->_data = CreateData<T>(static_cast<const T&>(self->get_data()));
 	}
 
 	//当源类型不能转化为目标类型时，设为默认值
@@ -694,30 +591,20 @@ namespace croper {
 			return std::vector<T>();
 		}
 		std::vector<T> ret;
-		for (int i = 0; i < this->size(); ++i) {
+		for (size_t i = 0; i < this->size(); ++i) {
 			ret.push_back(this->operator[](i));
 		}
 		return ret;
 	}
 
-#define OPERATOR_TEMPLATE(OP_NAME,RETURN_TYPE)										    \
+#define OPERATOR_TEMPLATE(OP_NAME, OP_SYMBOL, RET_TYPE,...)								\
 	template<typename T>																\
-	inline RETURN_TYPE variant::_IData_templ<T>::##OP_NAME##(const IData & d) const		\
+	inline RET_TYPE variant::_IData_templ<T>::##OP_NAME##(const IData & d) const		\
 	{																					\
 		return d.##OP_NAME##2(*this);													\
 	}																					\
 
-
-OPERATOR_TEMPLATE(add, std::shared_ptr<variant::IData>);				
-OPERATOR_TEMPLATE(sub, std::shared_ptr<variant::IData>);				
-OPERATOR_TEMPLATE(mul, std::shared_ptr<variant::IData>);				
-OPERATOR_TEMPLATE(div, std::shared_ptr<variant::IData>);				
-OPERATOR_TEMPLATE(rem, std::shared_ptr<variant::IData>);				
-OPERATOR_TEMPLATE(equal, bool);										
-OPERATOR_TEMPLATE(greater, bool);										
-OPERATOR_TEMPLATE(less, bool);										
-OPERATOR_TEMPLATE(ge, bool);											
-OPERATOR_TEMPLATE(le, bool);											
+OPERATOR_TEMPLATE_ALL()											
 #undef OPERATOR_TEMPLATE
 
 };

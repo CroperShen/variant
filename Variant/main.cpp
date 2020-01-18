@@ -68,32 +68,20 @@ int main2() {
 int Test1(int n, vector<string> v) {
 	int ret = 0;
 	for (auto s : v) {
-		ret += s.size();
 		for (int i = 0; i < n; ++i) {
 			cout << s << endl;
 		}
 		cout << endl;
+		ret += s.size();
 	}
 	return ret;
 }
 void Swap(int& a, int& b) {
-	int t = a;
+	int c = a;
 	a = b;
-	b = t;
+	b = c;
 }
 
 
-#define A(a) _##a##__##b##_
-#define B(b) A(b,ae)
-
-#define TO_STRING(T) #T
-
 int main() {
-	variant v = 1;
-	variant v2 = v < 10;
-	cout << v2 << endl;
-	for (variant i = 0; i < 10; ++i) {
-		cout << i << endl;
-	}
-	system("pause");
 }

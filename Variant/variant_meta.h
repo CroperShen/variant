@@ -5,14 +5,11 @@
 
 //检测两个类型是否相同
 template<typename T1, typename T2>
-class IsSame {
-private:
+struct IsSame {
 	enum { result = 0};
 };
 template<typename T>
-class IsSame<T,T> {
-private:
-
+struct IsSame<T,T> {
 	enum { result = 1 };
 };
 

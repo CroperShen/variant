@@ -9,9 +9,15 @@
 namespace croper {
 	template <typename T>
 	class Data :public variant::_IData_templ<T> {
+#define  VARIANT_REGISTER(T2) IsSame<T,T2>::result ||
+		static_assert(
+			VARIANT_REGISTER_TYPE false,
+			"complier error,unsupported type for template Data!"
+			);
+#undef VARIANT_REGISTER
 	public:
 		T data;
-		Data() {};
+		Data():data(T()){};
 		Data(const T& t) :data(t) {};
 		T& get_data() override;
 		const T& get_data() const override;
@@ -90,7 +96,6 @@ namespace croper {
 
 	template<typename T>
 	std::string Data<T>::to_string() const {
-#pragma message(TO_STRING(T))
 		return std::to_string(data);
 	}
 
@@ -111,7 +116,7 @@ namespace croper {
 	inline std::string Data<std::vector<variant>>::to_string() const {	
 		struct ele {
 			const list* p;
-			int index;
+			size_t index;
 		};
 		struct map_ele {
 			int state;
@@ -125,7 +130,7 @@ namespace croper {
 		checked[p].sz = "[";
 		while (!stk.empty()) {
 			checked[p].state = 1;
-			int &i = stk.top().index;
+			size_t &i = stk.top().index;
 			do {
 				std::string& sz = checked[p].sz;
 				const variant& v = (*p)[i];

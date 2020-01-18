@@ -13,15 +13,8 @@
 #ifndef __VARIANT_H
 #define __VARIANT_H
 
-#ifndef VARIANT_REGISTER_TYPE
-#define VARIANT_REGISTER_TYPE \
-	VARIANT_REGISTER(int)\
-	VARIANT_REGISTER(double)\
-	VARIANT_REGISTER(bool)\
-	VARIANT_REGISTER(string)\
-	VARIANT_REGISTER(list)
-#endif
 
+#include "variant_marco.h"
 #include "variant_meta.h"
 #include "variant_struct.h"
 #include "variant_data.h"
@@ -38,4 +31,7 @@ struct std::less<croper::variant> {
 		return v1 < v2;
 	}
 };
+
+#define VARIANT_HEADER_END
+#include "variant_marco.h"
 #endif
