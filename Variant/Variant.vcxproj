@@ -119,11 +119,13 @@
     <ClCompile Include="variant.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="variant_data_imp.h" />
     <ClInclude Include="variant_meta.h" />
     <ClInclude Include="variant.h" />
     <ClInclude Include="variant_struct.h" />
     <ClInclude Include="variant_data.h" />
     <ClInclude Include="variant_marco.h" />
+    <ClInclude Include="variant_struct_imp.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />

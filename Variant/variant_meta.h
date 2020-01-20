@@ -86,4 +86,24 @@ struct disable_if<T1&, T2&, T3, T4> {
 #define IF(Bool,Code) IF_##Bool##(Code)
 
 
+template <typename T>
+struct BaseType {
+	using type = T;
+};
+
+template <>
+struct BaseType<unsigned int> {
+	using type = int;
+};
+
+template <>
+struct BaseType<float> {
+	using type = double;
+};
+
+template <>
+struct BaseType<const char*> {
+	using type = std::string;
+};
+
 #endif

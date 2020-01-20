@@ -10,7 +10,7 @@ void Swap(int& a, int& b);
 
 int main2() {
 	cout << "================================================================================================" << endl;
-	cout <<    "1、能接受并输出多种类型的变量，现在支持int，double，bool，string，以及vector 5种类型。"        << endl;
+	cout << "1、能接受并输出多种类型的变量，现在支持int，double，bool，string，以及vector 5种类型。" << endl;
 	cout << "================================================================================================" << endl;
 	variant a = { 5 };                      //int
 	variant b = 4.99;                   //double
@@ -23,7 +23,7 @@ int main2() {
 	cout << d << endl;
 	cout << o << endl;
 	cout << "================================================================================================" << endl;
-	cout << "    2、其中vector特化为python里的list类型，能容纳各种数据类型（其实就是vector<variant>)"          << endl;
+	cout << "    2、其中vector特化为python里的list类型，能容纳各种数据类型（其实就是vector<variant>)" << endl;
 	cout << "================================================================================================" << endl;
 	variant e = { 5,4.99,false,"hello world" };            //同时容纳多种数据类型
 	variant f = { {"there","is","no"},12315,"bigbang" }; //支持嵌套的初始化
@@ -43,11 +43,11 @@ int main2() {
 
 	variant s3 = R"(\,\\\[552\])"_V;
 	cout << s3 << endl;
-	
+
 	cout << "================================================================================================" << endl;
 	cout << "       4、可以将自身展开并传递给特定函数：												         " << endl;
 	cout << "================================================================================================" << endl;
-	variant r1 = R"(5,["Allice","Bob","Carol","Dave"])"_V;    
+	variant r1 = R"(5,["Allice","Bob","Carol","Dave"])"_V;
 	cout << r1 << endl;
 	int x = r1.call(Test1);          //将r1展开传递给test1
 	cout << "返回值为" << x << endl;
@@ -55,7 +55,7 @@ int main2() {
 
 	variant r2 = { 5,2 };
 	cout << "调用前r2为" << r2 << endl;
-	r2.call(Swap);                   //将r2展开传递给Swap,Swap将交换两个参数的值，这将正确反映到r2上
+	//r2.call(Swap);                   //将r2展开传递给Swap,Swap将交换两个参数的值，这将正确反映到r2上
 	cout << "调用后r2为" << r2 << endl;
 
 	cout << "================================================================================================" << endl;
@@ -82,6 +82,11 @@ void Swap(int& a, int& b) {
 	b = c;
 }
 
+template <typename T1,typename T2,EXCLUDE_TYPE(T1,char),EXCLUDE_TYPE(T2,double)>
+struct A {
+
+};
 
 int main() {
+	A<int, int> a;
 }

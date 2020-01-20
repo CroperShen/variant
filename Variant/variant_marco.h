@@ -4,6 +4,13 @@
 
 
 #ifndef VARIANT_HEADER_END
+	//排除模板中的某个类型：
+
+#ifndef EXCLUDE_TYPE
+#define EXCLUDE_TYPE(T,EX_t) typename = typename enable_if<!std::is_same<typename std::decay<T>::type, EX_t>::value, char>::type
+#endif
+
+
 	//define VARIANT_REGISTERE(T) ....code....
 	#ifndef VARIANT_REGISTER_TYPE
 	#define VARIANT_REGISTER_TYPE	\
@@ -11,12 +18,15 @@
 		VARIANT_REGISTER(double)	\
 		VARIANT_REGISTER(bool)		\
 		VARIANT_REGISTER(string)	\
-		VARIANT_REGISTER(list)
+		VARIANT_REGISTER(list)		\
+		VARIANT_REGISTER(dict)		\
+		VARIANT_REGISTER(set)
+
 	#endif
 
 	//define OPERATOR_TEMPLATE(OP_NAME,OP_SYMBOL,RET_TYPE,...) ....code....
-	#define OPERATOR_PARTA_RET_T bool
-	#define OPERATOR_PARTB_RET_T std::shared_ptr<croper::variant::IData>
+	#define OPERATOR_PARTA_RET_T bool			//==, > , < , >= , <= 等参数的默认返回类型
+	#define OPERATOR_PARTB_RET_T std::shared_ptr<croper::variant::IData>      //+，-，*，/，% 等参数的默认返回类型
 
 	#ifndef OPERATOR_TEMPLATE_PART_A
 	#define OPERATOR_TEMPLATE_PART_A(...)						\

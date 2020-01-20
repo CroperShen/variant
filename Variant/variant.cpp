@@ -239,24 +239,21 @@ namespace croper {
 	}
 
 
-	variant & variant::operator[](int i)
-	{
-		if (is_type<list>()) {
-			return _data->original_data<list>()[i];
-		}
-#ifdef VARIANT_REGISTER_TYPE
-		ErrorMsg("variant的内部类型不是list");
-#endif
-		return *this;
+	variant& variant::operator[](const variant& v)
+	{	
+		return const_cast<variant&>(const_cast<const variant*>(this)->operator[](v));
 	}
 
-	const variant & variant::operator[](int i) const
+	const variant & variant::operator[](const variant& v) const
 	{
 		if (is_type<list>()) {
-			return _data->original_data<list>()[i];
+			return _data->original_data<list>()[(int)v];
+		}
+		else if (is_type<dict>()) {
+			return _data->original_data<dict>()[v];
 		}
 #ifdef VARIANT_REGISTER_TYPE
-		ErrorMsg("variant的内部类型不是list");
+		ErrorMsg("variant的内部类型不是list或dict");
 #endif
 		return *this;
 	}
@@ -487,6 +484,14 @@ namespace croper {
 		return *this = operator%(v2);
 	}
 
+	size_t variant::hashcode() const
+	{
+		if (_data == nullptr) {
+			return 0;
+		}
+		return _data->hashcode();
+	}
+
 	string variant::__My_Address() const
 	{
 		constexpr char sz2[] = ",data address:";
@@ -508,4 +513,30 @@ namespace croper {
 		return Variant_Read(p);
 	}
 
+	//==========================================================================================================================
+	//在这里重载不同类型的运算
+	//===============================================================================================================
+	std::shared_ptr<variant::IData> __data_mul(const variant::_IData_templ<string>& t1, const variant::_IData_templ<int>& t2) {
+		string sz;
+		for (int i = 0; i < t2.get_data(); ++i) {
+			sz += t1.get_data();
+		}
+		return variant::CreateData<string>(sz);
+	}
+
+	//=========================================================================================================
+	std::size_t hash_t::operator()(const croper::list& l) const {
+		size_t ret = 0;
+		for (auto& v : l) {
+			ret = ret ^ v.hashcode();
+		}
+		return ret;
+	}
+	std::size_t hash_t::operator()(const croper::variant& v) const {
+		return v.hashcode();
+	}
+
+	bool less_t::operator()(const croper::variant& v1, const croper::variant& v2) const {
+		return v1 < v2;
+	}
 }
